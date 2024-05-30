@@ -11,11 +11,16 @@ This is a project to get rider stats scraped from PCS using cheerio. The project
 
 ## Features 🚀
 
-### `/rider/:name`
+### `/rider/info/:name`
 
 This endpoint will return the rider stats for the given rider name. The rider name should be the same as the one on PCS.
 For example, `/rider/primoz-roglic` will return the stats for Primoz Roglic.
 The stats include the rider's birth, height, weight and more stats.
+
+### `/rider/palmares/:name`
+
+This endpoint will return the rider palmares for the given rider name. The rider name should be the same as the one on PCS.
+For example, `/rider/palmares/primoz-roglic` will return the palmares for Primoz Roglic.
 
 ## Roadmap 🗺️
 

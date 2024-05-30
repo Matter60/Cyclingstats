@@ -1,5 +1,5 @@
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 const generateRiderUrl = (name: string): string => {
     const baseUrl = 'https://www.procyclingstats.com/rider/';
@@ -7,7 +7,33 @@ const generateRiderUrl = (name: string): string => {
     return `${baseUrl}${urlFriendlyName}`;
 };
 
-export const getRiderData = async (name: string) => {
+interface RiderData {
+    name: string;
+    age: string;
+    nationality: string;
+    weight: string;
+    height: string;
+    placeOfBirth: string;
+    points: { [key: string]: string };
+    socialMedia: { [key: string]: string };
+    rankings: { [key: string]: string };
+    teams: string[];
+    imageUrl: string;
+}
+
+interface ErrorResponse {
+    error: string;
+}
+
+const getTextNodeValue = (element: cheerio.Element): string => {
+    const nextNode = element.nextSibling;
+    if (nextNode && nextNode.type === 'text') {
+        return nextNode.data.trim();
+    }
+    return '';
+};
+
+export const getRiderData = async (name: string): Promise<RiderData | ErrorResponse> => {
     const url = generateRiderUrl(name);
     try {
         const { data } = await axios.get(url);
@@ -21,12 +47,20 @@ export const getRiderData = async (name: string) => {
 
         const riderInfo = $('.rdr-info-cont');
 
-        const age = riderInfo.find('b:contains("Date of birth:")')[0].nextSibling.nodeValue.trim();
-       
-        const nationality = riderInfo.find('b:contains("Nationality:")').next('span').next('a').text().trim();
-        const weight = riderInfo.find('b:contains("Weight:")')[0].nextSibling.nodeValue.trim();
-        const height = riderInfo.find('b:contains("Height:")')[0].nextSibling.nodeValue.trim();
-        const placeOfBirth = riderInfo.find('b:contains("Place of birth:")').next('a').text().trim();
+        const ageElement = riderInfo.find('b:contains("Date of birth:")')[0];
+        const age = ageElement ? getTextNodeValue(ageElement) : '';
+
+        const nationalityElement = riderInfo.find('b:contains("Nationality:")').next('span').next('a');
+        const nationality = nationalityElement.length > 0 ? nationalityElement.text().trim() : '';
+
+        const weightElement = riderInfo.find('b:contains("Weight:")')[0];
+        const weight = weightElement ? getTextNodeValue(weightElement) : '';
+
+        const heightElement = riderInfo.find('b:contains("Height:")')[0];
+        const height = heightElement ? getTextNodeValue(heightElement) : '';
+
+        const placeOfBirthElement = riderInfo.find('b:contains("Place of birth:")').next('a');
+        const placeOfBirth = placeOfBirthElement.length > 0 ? placeOfBirthElement.text().trim() : '';
 
         const points: { [key: string]: string } = {};
         $('.pps ul li').each((i, el) => {
@@ -59,7 +93,7 @@ export const getRiderData = async (name: string) => {
 
         const imageUrl = "https://www.procyclingstats.com/" + $('.rdr-img-cont img').attr('src');
 
-        return {
+        const riderData: RiderData = {
             name: fullName,
             age,
             nationality,
@@ -72,6 +106,8 @@ export const getRiderData = async (name: string) => {
             teams,
             imageUrl,
         };
+
+        return riderData;
     } catch (error) {
         console.error(error);
         return { error: 'Error fetching rider data' };
