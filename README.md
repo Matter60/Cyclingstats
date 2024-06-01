@@ -1,4 +1,4 @@
-# Cycling statistics 🚴🚴
+# Cyclingstats 🚴🚴
 
 This is a project to get rider stats scraped from PCS using cheerio. The project is a work in progress and will be updated as I learn more about cheerio and web scraping.
 
