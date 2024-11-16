@@ -1,22 +1,18 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
-const generateRiderUrl = (name: string): string => {
-    const baseUrl = 'https://www.procyclingstats.com/rider/';
-    const urlFriendlyName = name.toLowerCase().replace(/\s+/g, '-');
-    return `${baseUrl}${urlFriendlyName}`;
-};
+const BASE_URL = 'https://www.procyclingstats.com/rider/';
 
 interface RiderData {
     name: string;
-    age: string;
+    age: number;
     nationality: string;
-    weight: string;
-    height: string;
+    weight: string;  // Full value like "78 kg"
+    height: string;  // Full value like "1.90 m"
     placeOfBirth: string;
-    points: { [key: string]: string };
-    socialMedia: { [key: string]: string };
-    rankings: { [key: string]: string };
+    points: Record<string, string>;
+    socialMedia: Record<string, string>;
+    rankings: Record<string, string>;
     teams: string[];
     imageUrl: string;
 }
@@ -25,80 +21,80 @@ interface ErrorResponse {
     error: string;
 }
 
-const getTextNodeValue = (element: cheerio.Element): string => {
-    const nextNode = element.nextSibling;
-    if (nextNode && nextNode.type === 'text') {
-        return nextNode.data.trim();
-    }
-    return '';
+const generateRiderUrl = (name: string): string => 
+    `${BASE_URL}${name.toLowerCase().replace(/\s+/g, '-')}`;
+
+const extractText = ($: cheerio.CheerioAPI, selector: string): string =>
+    $(selector).text().trim();
+
+// Correctly extract the age from the full text, which includes the birthdate and the age in parentheses
+const extractAgeFromFullText = (birthDateText: string): number | null => {
+    const ageMatch = birthDateText.match(/\((\d+)\)/);
+    return ageMatch ? parseInt(ageMatch[1], 10) : null;
 };
 
 export const getRiderData = async (name: string): Promise<RiderData | ErrorResponse> => {
-    const url = generateRiderUrl(name);
     try {
-        const { data } = await axios.get(url);
+        const { data } = await axios.get(generateRiderUrl(name));
         const $ = cheerio.load(data);
 
-        // Haal de naam op en trim spaties
-        let fullName = $('h1').text().trim();
-
-        // Vervang meerdere spaties door een enkele spatie
-        fullName = fullName.replace(/\s+/g, ' ');
+        const fullName = extractText($, 'h1').replace(/\s+/g, ' ');
 
         const riderInfo = $('.rdr-info-cont');
+        
+        // Capture the full text for date of birth, including the age in parentheses
+        const birthDateText = riderInfo.find('b:contains("Date of birth:")').parent().text().trim();
+        
+        // Extract age from full text
+        const age = birthDateText ? extractAgeFromFullText(birthDateText) : null;
 
-        const ageElement = riderInfo.find('b:contains("Date of birth:")')[0];
-        const age = ageElement ? getTextNodeValue(ageElement) : '';
+        // Extract nationality
+        const nationality = extractText($, '.rdr-info-cont b:contains("Nationality:") + span + a');
+        
+        // Extract weight (corrected to avoid extra text)
+        const weightText = riderInfo.find('b:contains("Weight:")').parent().text().trim();
+        const weight = weightText.match(/(\d+(\.\d+)?\s?kg)/)?.[0];  // Extracts "78 kg" or similar
 
-        const nationalityElement = riderInfo.find('b:contains("Nationality:")').next('span').next('a');
-        const nationality = nationalityElement.length > 0 ? nationalityElement.text().trim() : '';
+        // Extract height (corrected to avoid extra text)
+        const heightText = riderInfo.find('b:contains("Height:")').parent().text().trim();
+        const height = heightText.match(/(\d+(\.\d+)?\s?m)/)?.[0];  // Extracts "1.90 m" or similar
 
-        const weightElement = riderInfo.find('b:contains("Weight:")')[0];
-        const weight = weightElement ? getTextNodeValue(weightElement) : '';
+        // Extract place of birth
+        const placeOfBirth = extractText($, '.rdr-info-cont b:contains("Place of birth:") + a');
 
-        const heightElement = riderInfo.find('b:contains("Height:")')[0];
-        const height = heightElement ? getTextNodeValue(heightElement) : '';
-
-        const placeOfBirthElement = riderInfo.find('b:contains("Place of birth:")').next('a');
-        const placeOfBirth = placeOfBirthElement.length > 0 ? placeOfBirthElement.text().trim() : '';
-
-        const points: { [key: string]: string } = {};
-        $('.pps ul li').each((i, el) => {
+        const points: Record<string, string> = {};
+        $('.pps ul li').each((_, el) => {
             const specialty = $(el).find('.title').text().trim();
             const pointValue = $(el).find('.pnt').text().trim();
-            points[specialty] = pointValue;
+            if (specialty) points[specialty] = pointValue;
         });
 
-        const socialMedia: { [key: string]: string } = {};
-        $('.sites li').each((i, el) => {
-            const platform = $(el).find('span').attr('class')?.split(' ')[1];
+        const socialMedia: Record<string, string> = {};
+        $('.sites2 li').each((_, el) => {
+            const platform = $(el).find('a').text().trim().toLowerCase();
             const link = $(el).find('a').attr('href');
-            if (platform && link) {
-                socialMedia[platform] = link;
-            }
+            if (platform && link) socialMedia[platform] = link;
         });
 
-        const rankings: { [key: string]: string } = {};
-        $('.rdr-rankings li').each((i, el) => {
+        const rankings: Record<string, string> = {};
+        $('.rdr-rankings li').each((_, el) => {
             const rankingType = $(el).find('.title').text().trim();
             const rank = $(el).find('.rnk').text().trim();
-            rankings[rankingType] = rank;
+            if (rankingType) rankings[rankingType] = rank;
         });
-        
-        const teams = $('.rdr-teams li').map((i, el) => {
-            let team = $(el).text().trim();
-            team = team.replace(/(\d{4})([A-Za-z])/g, '$1 $2'); // Add space after the year
-            return team;
-        }).get();
 
-        const imageUrl = "https://www.procyclingstats.com/" + $('.rdr-img-cont img').attr('src');
+        const teams = $('.rdr-teams li').map((_, el) => 
+            $(el).text().trim().replace(/(\d{4})([A-Za-z])/g, '$1 $2')
+        ).get();
 
-        const riderData: RiderData = {
+        const imageUrl = `https://www.procyclingstats.com/${$('.rdr-img-cont img').attr('src') || ''}`;
+
+        return {
             name: fullName,
-            age,
+            age: age ?? NaN,  // Set age to NaN if extraction fails
             nationality,
-            weight,
-            height,
+            weight: weight ?? 'N/A',  // Use "N/A" if weight extraction fails
+            height: height ?? 'N/A',  // Use "N/A" if height extraction fails
             placeOfBirth,
             points,
             socialMedia,
@@ -106,10 +102,8 @@ export const getRiderData = async (name: string): Promise<RiderData | ErrorRespo
             teams,
             imageUrl,
         };
-
-        return riderData;
     } catch (error) {
-        console.error(error);
+        console.error(`Error fetching rider data: ${(error as Error).message}`);
         return { error: 'Error fetching rider data' };
     }
 };

@@ -1,4 +1,3 @@
-// @ts-ignore comment
 import { Hono } from "hono";
 
 import { getRiderData } from "./getRiderData";

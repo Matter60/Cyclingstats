@@ -6,12 +6,12 @@ This is a project to get rider stats scraped from PCS using cheerio. The project
 
 1. Clone the repository
 2. Run `npm install` to install the dependencies
-3. Run `npm wrangler -D` to install wrangler globally
+3. Run `npm i wrangler -D` to install wrangler globally
 4. Run `npm run dev` to start the api server
 
 ## Features 🚀
 
-### `/rider/info/:name`
+### `/rider/:name`
 
 This endpoint will return the rider stats for the given rider name. The rider name should be the same as the one on PCS.
 For example, `/rider/primoz-roglic` will return the stats for Primoz Roglic.
@@ -27,6 +27,7 @@ For example, `/rider/palmares/primoz-roglic` will return the palmares for Primoz
 - [x] Get rider stats
 - [ ] Get teams
 - [ ] Get rider palmares
+- [ ] Latest results by year with sorting asc desc
 
 ## Contributing
 
