@@ -25,7 +25,8 @@ For example, `/rider/palmares/primoz-roglic` will return the palmares for Primoz
 ## Roadmap 🗺️
 
 - [x] Get rider stats
-- [ ] Get teams
+- [ ] Get all teams
+- [ ] Get data per team
 - [ ] Get rider palmares
 - [ ] Latest results by year with sorting asc desc
 

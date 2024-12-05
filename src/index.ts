@@ -49,4 +49,21 @@ app.get('/rider/palmares/:name', async (c) => {
   }
 });
 
+// app.get("/rider/results/:name/:year", async (c) => {
+//   const name = c.req.param("name");
+//   const year = c.req.param("year");
+//   if (!name) {
+//     return c.json({ error: "Name parameter is required" }, 400);
+//   }
+//   if (!year) {
+//     return c.json({ error: "Year parameter is required" }, 400);
+//   try {
+//     const data = await getRiderResults(name);
+//     return c.json(data);
+//   } catch (error) {
+//     return c.json({ error: "Failed to fetch rider results" }, 500);
+//   }
+    
+//   })
+
 export default app;
